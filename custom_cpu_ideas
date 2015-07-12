@@ -1,0 +1,240 @@
+
+IMMEDIATE CONCERNS:
+===================
+    32-bit machine (32bit Physical, Virtual, and wordlength)
+       - smaller quantities than 32 bits need additional code to ensure nothing
+       breaks (i.e. mask off everything above the variable size)
+       - 32-bit words means we can handle "large" calculations in hardware (no
+       need for 16 and 32 bit arithmetic libraries.
+       - 32-bit memory spaces = plenty of room for programs (including OSes)
+       - 32-bit fixed-width instructions:
+            lots of room for different instruction types. fixed-width makes
+            decoding easier.
+
+    32 registers
+       - lots of room for ease of programming in assembly. no need to make lots
+       of temps in memory.  in terms of C compiler, lots of room for passing
+       the locals in the registers, less need to spill local vars into memory.
+
+    3 condition codes:
+        - Not sure if I need more just yet, but I have N, Z, and P flags, like
+        LC3 which are set according to the last result of an arithmetic
+        operation taken as a 32-bit 2's-complement signed value is negative,
+        zero, or positive
+        - LC3 ISA has the Load-style instructions affect these flags; not sure
+        if i want or need that behavior
+        - Carry bits and Overflow bits: are they desireable or necessary? I may
+        just be able to fake them in software using NZP bits
+
+    no unaligned accesses allowed
+        It just makes life a lot easier if we don't have to worry about wierd
+        alignment, so each memory location will be one word wide.  This comes
+        at the expense of some efficiency for code that is smaller than our
+        word size.
+
+    How many instructions? 
+        I think 6 bits for the opcodes should be enough as it leaves room for
+        64 opcodes (a lot for a somewhat minimal processor) and it leaves
+        26bits left for PC-relative jumps.
+
+INSTRUCTION LAYOUT:
+===================
+    32-bit instructions = 6bits(Opcode) + 5bits(destination register) + 5bits(Source reg1) + 5bits(source reg2)
+        11-bits unused
+
+ALU operations:
+===============
+    AND: bitwise ANDs the contents of sr1 and sr2 and stores them in dr1
+        opcode = 000000
+        e.g. AND <destination_reg1> <source_reg1> <source_reg2>
+    AND_IMMEDIATE (sign extend or zero extend the immediate value? maybe have two variants destinguished by an unused bit?)
+        opcode = 000000
+        e.g. AND <destination_reg1> <source_reg1> <immediatel_val> <immediate-flag>
+             6-bits + 5-bits + 5-bits + 15-bit-immediate + 1-bit-flag
+
+    OR: bitwise ORs the contents of sr1 and sr2 and stores them in dr1
+        opcode = 000001
+        e.g. OR <destination_reg1> <source_reg1> <source_reg2>
+    OR_IMMEDIATE (sign extend or zero extend the immediate value? maybe have two variants destinguished by an unused bit?)
+        opcode = 000001
+        e.g. OR <destination_reg1> <source_reg1> <immediatel_val> <immediate-flag>
+             6-bits + 5-bits + 5-bits + 15-bit-immediate + 1-bit-flag
+
+    NOT: negates contents of sr1 and puts them in dr1
+        opcode = 000010
+        e.g. NOT <destination_reg1> <source_reg1>
+             6-bits + 5-bits + 5-bits + 16-unused-bits
+
+    XOR:
+        opcode = 000011
+        e.g. XOR <destination_reg1> <source_reg1> <source_reg2>
+             6-bits + 5-bits + 5-bits + 5 bits + 11-unused-bits
+    XOR_IMMEDIATE (sign extend or zero extend the immediate value? maybe have two variants destinguished by an unused bit?)
+        opcode = 000011
+        e.g. XOR <destination_reg1> <source_reg1> <immediatel_val> <immediate-flag>
+             6-bits + 5-bits + 5-bits + 15-bit-immediate + 1-bit-flag
+
+    ADD:
+        opcode = 000100
+        e.g. ADD <destination_reg1> <source_reg1> <source_reg2>
+             6-bits + 5-bits + 5-bits + 5 bits + 11-unused-bits
+    ADD_IMMEDIATE
+        opcode = 000100
+        e.g. ADD <destination_reg1> <source_reg1> <immediatel_val> <immediate-flag>
+             6-bits + 5-bits + 5-bits + 15-bit-immediate + 1-bit-flag
+    SUB 
+        opcode = 000101
+        e.g. SUB <destination_reg1> <source_reg1> <source_reg2>
+             6-bits + 5-bits + 5-bits + 5 bits + 11-unused-bits
+    SUB_IMMEDIATE
+        opcode = 000101
+        e.g. SUB <destination_reg1> <source_reg1> <immediatel_val> <immediate-flag>
+             6-bits + 5-bits + 5-bits + 15-bit-immediate + 1-bit-flag
+    MUL  (do i need signed and unsigned variations?)
+        separate multiplier from ALU?
+        4 registers for multiplication (DR1:DR2 is where the results are stored)
+        opcode = 000110
+    DIV
+        separate division unit from ALU?
+        opcode = 000111
+    COMPARE (do i need both signed and unsigned compare instructions?)
+        (do we also want to be able to compare against immediate values?)
+        opcode = 001000
+    SHIFTL 
+        opcode = 001001
+        e.g. SHIFTL <destination_reg1> <source_reg1> <source_reg2>
+    SHIFTL_IMMEDIATE
+        opcode = 001001
+        e.g. SHIFTL <destination_reg1> <source_reg1> <immediatel_val> <immediate-flag>
+             6-bits + 5-bits + 5-bits + 15-bit-immediate + 1-bit-flag
+    ASHIFTR 
+        opcode = 001010
+        e.g. ASHIFTR <destination_reg1> <source_reg1> <source_reg2>
+             6-bits + 5-bits + 5-bits + 5 bits + 11-unused-bits
+    ASHIFTR_IMMEDIATE
+        opcode = 001010
+        e.g. ASHIFTR <destination_reg1> <source_reg1> <immediatel_val> <immediate-flag>
+             6-bits + 5-bits + 5-bits + 15-bit-immediate + 1-bit-flag
+
+    LSHIFTR 
+        opcode = 001011
+        e.g. LSHIFTR <destination_reg1> <source_reg1> <source_reg2>
+             6-bits + 5-bits + 5-bits + 5 bits + 11-unused-bits
+    LSHIFTR_IMMEDIATE
+        opcode = 001011
+        e.g. LSHIFTR <destination_reg1> <source_reg1> <immediatel_val> <immediate-flag>
+             6-bits + 5-bits + 5-bits + 15-bit-immediate + 1-bit-flag
+
+LOAD instructions:
+==================
+    LOAD LABEL (PC-relative)
+        opcode = 001011
+        e.g. LOAD <destination_reg> <label/PC-relative-offset>
+             6-bits + 5-bits + 21-bit-offset
+        NOTE: load address = PC + 1 + offset
+    LOADR (base register + offset)
+        opcode = 001100
+        e.g. LOADR <destination_reg> <base_reg> <base_reg_offset>
+             6-bits + 5-bits + 5-bits + 16-bit-offset
+    LOADA LABEL (PC-relative) ; calculates the address and loads into the destination register
+        The "A" stands for "address", so this instruction is equivalent (more or less) 
+        to the & (reference) operator in C for pointers
+        opcode = 001101
+        e.g. LOADA <destination_reg> <label/PC-relative-offset>
+             6-bits + 5-bits + 21-bit-offset
+
+STORE instructions:
+===================
+    STORE LABEL (PC-relative)
+        opcode = 001110
+        e.g. STORE <source_reg> <label/PC-relative-offset>
+             6-bits + 5-bits + 21-bit-offset
+
+    STORER (base register + offset)
+        opcode = 001111
+        e.g. STORE <source_reg> <base_reg> <base_reg_offset>
+             6-bits + 5-bits + 5-bits + 16-bit-offset
+
+JUMP instructions: 
+===================
+
+    jumps have short and long form instructions that take 32 and 64 bits
+    respectively (small jumps have 16-bit immediates, long jumps force the cpu to
+            load the next 32-bit word and interpret that as the jump target)
+
+    NOTE: I may not want to do the above
+
+    JUMP LABEL (PC-relative)
+        opcode = 010000
+        e.g. JUMP <pc-relative-offset>
+            6-bits + 26-bits
+    JUMPR (base register + Offset)
+    JSR (should they all be pc relative? or should I have a register indexed one too?)
+
+BRANCH instructions:
+====================
+
+- NOTE: I'm still trying to determine what I want to do about condition codes
+and branch instructions so this section is subject to change
+    <BRANCH_OPCODE> <condition-flags-to-check> <pc-relative-offset>
+        6-bits + 3-bits + 23-bits
+    BRANCH_OPCODE = 010001
+
+    There are only pc-relative branch routines because they are only really to
+    be used for conditional logic (as opposed to subroutine invocation), and if
+    a conditional spans more than a 4MB, then we need to seriously re-eval
+    because that conditional has become MASSIVELY complex
+
+    3 condition codes: N Z P (negative, zero, positive)
+        the basic branch instructions are these:
+            BR = BRNZP  (unconditional branch) (same as jump)
+            BRNZ (branch if negative or zero; i.e. branch if not positive)
+            BRNP (branch if negative or positive; i.e. branch if not zero)
+            BRZP (branch if zero or positive; i.e. branch if not negative)
+            BRN (branch if negative)
+            BRZ (branch if zero)
+            BRP (branch if positive)
+
+            
+    ALIASES to simple branch instructions (for convenience)
+
+    BRA (haha) (pc-relative branch always)
+        - useless instruction but needs to be handled. Alias for BR/BRNZP
+    BNV (pc-relative branch never)
+        -incidentally, if the NZP bits of the instruction are cleared, then we
+        only branch if none of these conditions are true, which is impossible,
+        so therefore this is a "branch never" (i.e. a useless instruction), but
+        it must be handled in our branch support code. This won't be included
+        in the instruction set manual, but the encoding is valid and therefore
+        must be handled.
+            
+    BGT (branch greater than) (PC-relative)
+        - alias for BRP
+    BGE (branch greater than or equal) (PC-relative)
+        - alias for BRZP
+    BEQ  (branch equal) (PC-relative)
+        - alias for BRZ
+
+    BLE (branch less-than-or-equal pc-relative)
+        - alias for BRNZ
+        - BLO (haha) is another alias for this situation
+
+    BLT (haha) (branch less than) (PC-relative)
+        - alias for BRN
+        - SANDWICH is another alias for BLT...
+    BNE (branch not equal) (PC-relative)
+        - alias for BRNP
+
+    BRO (branch on overflow) (PC-relative) (needed for making arithmetic libraries?)
+        - NOTE: I don't know if i need this instruction yet
+
+EVENTUAL CONCERNS:
+==================
+    super-scalar
+    5-stage pipeline
+    virtual memory
+    interrupts (for timers and such)
+    traps
+    caching
+
+    need atomic test&set or compare&swap instructions to help implement locks/mutexes
