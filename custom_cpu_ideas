@@ -169,7 +169,9 @@ JUMP instructions:
         e.g. JUMP <pc-relative-offset>
             6-bits + 26-bits
     JUMPR (base register + Offset)
-    JSR (should they all be pc relative? or should I have a register indexed one too?)
+        opcode = 010100
+        e.g. JUMPR <unused-bits> <base_reg> <base_reg_offset>
+            6-bits + 5-bits-unused + 5-bits + 16-bit-offset
 
 BRANCH instructions:
 ====================
@@ -227,6 +229,20 @@ and branch instructions so this section is subject to change
 
     BRO (branch on overflow) (PC-relative) (needed for making arithmetic libraries?)
         - NOTE: I don't know if i need this instruction yet
+
+CALL instructions:
+==================
+    - R30 on our machine will be the return address to come back to for subroutines
+    CALL (pc-relative)
+        opcode = 010010
+        e.g. CALL <pc-relative-offset>
+            6-bits + 26-bits
+    CALLR (base-register + offset)
+        opcode = 010011
+        e.g. CALLR <base_reg> <base_reg_offset_bits>
+            6-bits + 5-bits + 21-bits
+    RETURN
+        This instruction will just be an alias to "JUMPR R30"
 
 EVENTUAL CONCERNS:
 ==================
