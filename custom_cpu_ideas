@@ -244,6 +244,32 @@ CALL instructions:
     RETURN
         This instruction will just be an alias to "JUMPR R30"
 
+TRAP instructions:
+==================
+    On this system there will only be 128 possible software interrupt sources, and I don't anticipate needing more, but just in case, the trap instruction will get its trap vector number from 
+    TRAP Trap-vector-register (SWI and SYSCALL are aliases to TRAP)
+        Enters interrupt mode on the processor and jumps to the indicated
+        software interrupt. Only the bottom 7 bits of the trap-vector-register are used
+        to determine which software interrupt to execute (but this could be extended in
+        the future if necessary)
+        OPCODE = 010101
+        e.g. TRAP <trap-vector-register> <unused-bits>
+            6-bits + 5-bits + 21-bits-unused
+    RETURNI/RFI/SYSCALL_EXIT  
+        RETURNI acts just like RETURN except it also causes the processor to
+        exit interrupt mode (so it will restore all of the registers to how
+        they were prior to interrupt execution). Because the hardware copies
+        all of the cpu registers when we take an interrupt, returning from the
+        interrupt is just a matter of reloading those saved values, so we don't
+        need to worry about saving the return address of where we were in R30.
+        
+        opcode = 010110
+        e.g. RETURNI
+            "RETURNI 0x0000000"
+            6-bits + 26-bits-unused
+
+        
+
 EVENTUAL CONCERNS:
 ==================
     super-scalar
