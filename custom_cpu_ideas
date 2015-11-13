@@ -287,6 +287,13 @@ TRAP instructions:
         side-step our problem and still allow us to process other interrupts
         quickly since they can still have hardware hardware save/restore the
         machine-state.
+        - On second thought, maybe I need two "scheduler interrupts" (one
+        hardware and one software) so that I am not limiting myself to only
+        making pre-emptive OSes for this machine. Without a software scheduler
+        interrupt that has this same feature as I described above, a
+        co-operative OS wouldn't work because it would issue a software
+        interrupt, change process state, and immediately have that work undone
+        by the hardware automatically restoring the machine's state.
         
 
 EVENTUAL CONCERNS:
