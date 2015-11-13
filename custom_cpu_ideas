@@ -268,6 +268,25 @@ TRAP instructions:
             "RETURNI 0x0000000"
             6-bits + 26-bits-unused
 
+    NOTES ABOUT INTERRUPTS AND CONTEXT SWITCHING:
+        - I want to have my CPU automatically save state during an interrupt so
+        that the software doesn't have to keep track of this, which yields
+        faster interrupt processing.
+        - The above is at odds with switching tasks in a pre-emptive operating
+        system. This is because the kernel will need to save all of the
+        machine-state for a process and then switch to the machine-state for a
+        different process. When we switch processes, we don't return to
+        the original process like in other interrupts, so the automatic
+        hardware restoration of machine-state would clobber the state switching
+        that we just performed.
+        - The mechanism I propose for dealing with this is to designate one
+        interrupt source to be a special "scheduler" interrupt that the CPU is
+        aware of. When an interrupt is requested from the scheduler interrupt
+        source, instead of saving/restoring machine state like it normally
+        would, the CPU now needs to save state in software. This should
+        side-step our problem and still allow us to process other interrupts
+        quickly since they can still have hardware hardware save/restore the
+        machine-state.
         
 
 EVENTUAL CONCERNS:
