@@ -97,6 +97,14 @@ ALU operations:
     DIV
         separate division unit from ALU?
         opcode = 000111
+        - Multiplication has 2 Destination registers; maybe I want to do the
+        same with Division?
+        - DR1 could hold the quotient and DR2 could hold the remainder, so if
+        we need to do a modulus, we just get the result from DR2.
+        - Are there any drawbacks to this aside from using 2 registers for the
+        output and possibly having throwing away half the result? Does it even
+        matter with ~30ish registers at our disposal?
+
     COMPARE (do i need both signed and unsigned compare instructions?)
         (do we also want to be able to compare against immediate values?)
         opcode = 001000
